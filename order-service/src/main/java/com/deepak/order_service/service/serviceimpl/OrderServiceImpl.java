@@ -3,6 +3,7 @@ package com.deepak.order_service.service.serviceimpl;
 import org.springframework.stereotype.Service;
 
 import com.deepak.order_service.client.ProductClient;
+import com.deepak.order_service.dto.OrderCreatedEvent;
 import com.deepak.order_service.dto.OrderRequestDto;
 import com.deepak.order_service.dto.OrderResponseDto;
 import com.deepak.order_service.dto.ProductResponseDto;
@@ -19,11 +20,12 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final ProductClient productServiceClient;
     private final ProductLookupService productLookupService;
-
-    public OrderServiceImpl(OrderRepository orderRepository, ProductClient productServiceClient, ProductLookupService productLookupService) {
+    private final OrderProducer orderProducer;
+    public OrderServiceImpl(OrderRepository orderRepository, ProductClient productServiceClient, ProductLookupService productLookupService,OrderProducer orderProducer) {
         this.orderRepository = orderRepository;
         this.productServiceClient = productServiceClient;
         this.productLookupService = productLookupService;
+        this.orderProducer = orderProducer;
     }
 
     @Override
@@ -37,23 +39,17 @@ public class OrderServiceImpl implements OrderService {
         order.setQuantity(request.getQuantity());
         order.setStatus("CREATED");
         Order savedOrder = orderRepository.save(order);
+        OrderCreatedEvent event =
+        new OrderCreatedEvent(
+                savedOrder.getId(),
+                savedOrder.getProductId(),
+                savedOrder.getQuantity()
+        );
+        orderProducer.publishOrderCreatedEvent(event);
         return new OrderResponseDto(savedOrder.getId(), savedOrder.getProductId(), savedOrder.getQuantity(),
                 savedOrder.getStatus());
 
     }
 
-    @CircuitBreaker(name = "productService", fallbackMethod = "productFallback")
-    public ProductResponseDto getProductById(Long productId) {
 
-        return productServiceClient.getProductById(productId);
-    }
-
-    public OrderResponseDto createOrderFallback(OrderRequestDto request, Exception ex) {
-
-        return new OrderResponseDto(
-                null,
-                request.getProductId(),
-                request.getQuantity(),
-                "PRODUCT_SERVICE_DOWN");
-    }
 }

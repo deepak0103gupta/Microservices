@@ -25,6 +25,11 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Actuator = Helps manage, maintain and monitor the application -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
